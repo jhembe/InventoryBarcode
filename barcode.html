@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcode Generator</title>
     <!-- Bootstrap CSS -->
+    <link type="image/png"  rel="icon" href="./assets/barcodeScan.png">
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -94,6 +95,13 @@
             console.log("Downwload Button Triggered")
             downloadBarcodes();
         })
+
+        document.querySelector('#downloadButtonPage').addEventListener('click',function(){
+            console.log("Downwload Button Triggered")
+            downloadBarcodesSinglePage();
+        })
+
+
         // Function to generate barcode
         function generateBarcode() {
             console.log("Generate Barcode Started")
