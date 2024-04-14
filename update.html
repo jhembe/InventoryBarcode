@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcode Generator</title>
     <!-- Bootstrap CSS -->
-    <link type="image/png"  rel="icon" href="./assets/barcodeScan.png">
+    <link type="image/png" rel="icon" href="./assets/barcodeScan.png">
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -16,15 +16,15 @@
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
-        </button>        
+        </button>
 
         <div class="collapse navbar-collapse justify-content-end" id="navbarSupportedContent">
             <ul class="navbar-nav">
-                <li class="nav-item active">
-                    <a class="nav-link" href="#">New Barcode <span class="sr-only">(current)</span></a>
-                </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="update.html">Restock</a>
+                    <a class="nav-link" href="barcode.html">New Barcode</a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">Restock<span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="index.html">Visuals (Home)</a>
@@ -34,13 +34,16 @@
     </nav>
 
     <div class="container mt-5">
-        <h1 class="mb-4 title">Product Barcode Generator</h1>
+        <h1 class="mb-4 title">Restock Barcode Generator</h1>
         <form id="barcodeForm">
             <div class="form-group">
                 <label for="productType">Product Type:</label>
-                <input type="text" class="form-control" id="productType" placeholder="Enter product type">
-                <span id="productType" class="form-text">
-                    Must be 8-20 characters long.
+                
+                <select class="form-control" id="productType">
+                    <!-- Product types will be dynamically loaded here -->
+                </select>
+                <span id="productTypee" class="form-text">
+                    click to access the dropdown menu, and choose what product you want to update
                   </span>
             </div>
             <div class="form-group">
@@ -58,20 +61,16 @@
                 <button id="downloadButtonPage" class="btn btn-success mt-4" style="display:none;">Download Barcode Page</button>
             </div>
         </div>
-        
-
     </div>
 
     <!-- Include Bootstrap JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-        
 
     <script type="module">
 
         // Import Firebase modules
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js';
-        import { getFirestore, addDoc, collection } from 'https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore.js';
-
+        import { getFirestore, collection, getDocs, doc, setDoc } from 'https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore.js';
 
         // Firebase configuration
         const firebaseConfig = {
@@ -84,11 +83,54 @@
             measurementId: "G-0FD3P43CCF"
         };
 
+
         // Initialize Firebase app
         const app = initializeApp(firebaseConfig);
-        // const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
+        // Array to store product types and their IDs
+        let productTypes = [];
+
+        // Variable to store selected product type ID
+        let selectedProductTypeId = "";
+        let selectedProductUnit = null;
+
+        // Function to load product types from Firestore
+        async function loadProductTypes() {
+            const productTypeSelect = document.getElementById('productType');
+            // Query Firestore for product types
+            const querySnapshot = await getDocs(collection(db, 'barcodes'));
+            // Clear existing options
+            productTypeSelect.innerHTML = "";
+            // Populate select options with product types
+            querySnapshot.forEach(doc => {
+                const productTypeId = doc.id; // Assuming the document ID is the product type ID
+                const productType = doc.data().productType; // Assuming productType is a field in the document
+                const productUnits = doc.data().unit; // Assuming unit is a field in the document
+                productTypes.push({ id: productTypeId, type: productType, unit:productUnits });
+                const option = document.createElement('option');
+                option.value = productType;
+                option.textContent = productType;
+                productTypeSelect.appendChild(option);
+            });
+        }
+
+        // Event listener for product type selection
+        document.getElementById('productType').addEventListener('change', function() {
+            selectedProductTypeId = productTypes.find(pt => pt.type === this.value).id;
+            selectedProductUnit = productTypes.find(pt => pt.type === this.value).unit;
+            console.log('Selected Product Type ID:', selectedProductTypeId);
+            console.log("Selected Product has a Value : ",this.value);
+            console.log("Selected Product has unit : ",selectedProductUnit);
+        });
+
+
+        // Load product types when the page is loaded
+        window.addEventListener('load', loadProductTypes);
+
+
+
+        // Button Event listeners
         document.querySelector('#generateBtn').addEventListener('click',function(){
             console.log("Generate Barcode Triggered");
             generateBarcode();
@@ -103,6 +145,14 @@
             console.log("Downwload Button Triggered")
             downloadBarcodesSinglePage();
         })
+        // Button event listeners end
+
+
+        // Function to generate barcode value
+        function generateBarcodeValue(productType, index) {
+            // Generate barcode value using product type abbreviation and index
+            return productType.substring(0, 2).toUpperCase() + index.toString().padStart(6, '0');
+        }
 
 
         // Function to generate barcode
@@ -124,8 +174,6 @@
                 var barcodeValue = generateBarcodeValue(productType, i + 1); // Generate barcode value
 
                 let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                // svg.setAttribute('jsbarcode-format', 'CODE128')
-                // svg.setAttribute('jsbarcode-value', barcodeValue)
                 svg.className.baseVal = "barcode";
                 barcodeContainer.appendChild(svg);
 
@@ -136,40 +184,35 @@
                     displayValue: true,
                     fontSize: 20
                 });
-                // barcodeContainer.appendChild(barcodeDiv);
 
             }
-            // Store barcode data in Firestore
+
             console.log(productType,barcodeValue,quantity);
-            storeBarcodeInFirestore(productType, barcodeValue, quantity,originalQuantity);
+            // storeBarcodeInFirestore(productType, barcodeValue, quantity,originalQuantity);
+            updateBarcodeInFirestore(barcodeValue, quantity);
             document.getElementById("downloadButton").style.display = "block";
             document.getElementById("downloadButtonPage").style.display = "block";
         }
 
-        // Function to generate barcode value
-        function generateBarcodeValue(productType, index) {
-            // Generate barcode value using product type abbreviation and index
-            return productType.substring(0, 2).toUpperCase() + index.toString().padStart(6, '0');
+        // Function to update barcode value and quantity in Firestore
+        async function updateBarcodeInFirestore(barcodeValue, quantity) {
+            try {
+                const docRef = doc(db, 'barcodes', selectedProductTypeId);
+                await setDoc(docRef, {
+                    barcode: barcodeValue,
+                    originalUnit: quantity,
+                    unit: quantity
+                }, { merge: true });
+                console.log('Barcode updated successfully in Firestore.');
+            } catch (error) {
+                console.error('Error updating barcode in Firestore:', error);
+            }
         }
 
-        // Function to store barcode data in Firestore
-        async function storeBarcodeInFirestore(productType, barcodeValue, quantity,originalQuantity) {
-            console.log("Storing Proccess Started")
-            try {
-                const docRef = await addDoc(collection(db, 'barcodes'), {
-                    productType: productType,
-                    barcode: barcodeValue,
-                    unit: quantity,
-                    originalUnit:originalQuantity
-                });
-                console.log("Barcode data stored in Firestore with ID: ", docRef.id);
-                alert("data stored");
-            } catch (error) {
-                console.log("Store Proccess faced and error")
-                console.error("Error storing barcode data in Firestore: ", error);
-            }
-            console.log("Store proccess ended");
-        }
+        // Call this function whenever you need to update the barcode in Firestore
+        // Example usage: updateBarcodeInFirestore(productType, barcodeValue, quantity);
+
+
 
         // Function to download barcodes
         function downloadBarcodes() {
@@ -192,6 +235,8 @@
                 });
         }
 
+
+        // function to download barcodes for a single element
         function downloadBarcodesSinglePage() {
             console.log("Download Proccess Started")
             console.log(productType.value);
@@ -210,12 +255,12 @@
                 });
         }
 
+
+
     </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.js"></script>
-    
-
 </body>
 </html>
