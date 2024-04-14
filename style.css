@@ -1,0 +1,11 @@
+/* body{
+    background-color: rgba(255, 111, 111, 0.877);
+} */
+
+h1.title{
+    font-size: 1.7em;
+}
+
+div.container{
+    margin-top: 100px;
+}

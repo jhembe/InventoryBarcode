@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Generator</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4 title">Product Barcode Generator</h1>
+        <form id="barcodeForm">
+            <div class="form-group">
+                <label for="productType">Product Type:</label>
+                <input type="text" class="form-control" id="productType" placeholder="Enter product type">
+                <span id="productType" class="form-text">
+                    Must be 8-20 characters long.
+                  </span>
+            </div>
+            <div class="form-group">
+                <label for="quantity">Quantity:</label>
+                <input type="number" class="form-control" id="quantity" placeholder="Enter quantity">
+            </div>
+            <button type="button" class="btn btn-primary" id="generateBtn">Generate Barcode</button>
+        </form>
+        <div id="barcodeContainer" class="mt-4"></div>
+        <button id="downloadButton" class="btn btn-success mt-4" style="display:none;">Download Barcodes</button>
+    </div>
+
+    <!-- Firebase JavaScript SDK -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore.js"></script> -->
+    <!-- JsBarcode library -->
+    <script type="module">
+        // Import Firebase modules
+        
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js';
+        import { getFirestore, addDoc, collection } from 'https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBck4oIFAU6ynyq-rGO4hTEk60KIzcnS6k",
+            authDomain: "inventtest-f47d9.firebaseapp.com",
+            projectId: "inventtest-f47d9",
+            storageBucket: "inventtest-f47d9.appspot.com",
+            messagingSenderId: "175503530578",
+            appId: "1:175503530578:web:5a3697688bdae2d6d15d8b",
+            measurementId: "G-0FD3P43CCF"
+        };
+
+        // Initialize Firebase app
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.querySelector('#generateBtn').addEventListener('click',function(){
+            console.log("Generate Barcode Triggered");
+            generateBarcode();
+        })
+
+        document.querySelector('#downloadButton').addEventListener('click',function(){
+            console.log("Downwload Button Triggered")
+            downloadBarcodes();
+        })
+        // Function to generate barcode
+        function generateBarcode() {
+            console.log("Generate Barcode Started")
+            var productType = document.getElementById("productType").value;
+            var quantity = parseInt(document.getElementById("quantity").value);
+            var barcodeContainer = document.getElementById("barcodeContainer");
+            let originalQuantity = quantity;
+
+
+            barcodeContainer.innerHTML = ""; // Clear previous barcodes
+
+            console.log("Initial variables Finished")
+            
+            console.log("loop block about to start")
+            for (var i = 0; i < quantity; i++) {
+                var barcodeDiv = document.createElement("div");
+                var barcodeValue = generateBarcodeValue(productType, i + 1); // Generate barcode value
+
+                let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                // svg.setAttribute('jsbarcode-format', 'CODE128')
+                // svg.setAttribute('jsbarcode-value', barcodeValue)
+                svg.className.baseVal = "barcode";
+                barcodeContainer.appendChild(svg);
+
+                console.log(document.querySelector('.barcode'));
+                // JsBarcode(".barcode").init();
+                JsBarcode(".barcode", barcodeValue, {
+                    format: "CODE128",
+                    displayValue: true,
+                    fontSize: 20
+                });
+                // barcodeContainer.appendChild(barcodeDiv);
+
+            }
+            // Store barcode data in Firestore
+            console.log(productType,barcodeValue,quantity);
+            storeBarcodeInFirestore(productType, barcodeValue, quantity,originalQuantity);
+            document.getElementById("downloadButton").style.display = "block";
+        }
+
+        // Function to generate barcode value
+        function generateBarcodeValue(productType, index) {
+            // Generate barcode value using product type abbreviation and index
+            return productType.substring(0, 2).toUpperCase() + index.toString().padStart(6, '0');
+        }
+
+        // Function to store barcode data in Firestore
+        async function storeBarcodeInFirestore(productType, barcodeValue, quantity,originalQuantity) {
+            console.log("Storing Proccess Started")
+            try {
+                const docRef = await addDoc(collection(db, 'barcodes'), {
+                    productType: productType,
+                    barcode: barcodeValue,
+                    unit: quantity,
+                    originalUnit:originalQuantity
+                });
+                console.log("Barcode data stored in Firestore with ID: ", docRef.id);
+                alert("data stored");
+            } catch (error) {
+                console.log("Store Proccess faced and error")
+                console.error("Error storing barcode data in Firestore: ", error);
+            }
+            console.log("Store proccess ended");
+        }
+
+        // Function to download barcodes
+        function downloadBarcodes() {
+            console.log("Download Proccess Started")
+            console.log(productType.value);
+            var container = document.getElementById("barcodeContainer");
+            var barcodes = container.getElementsByTagName("svg");
+            console.log("Initial variables assigned");
+
+
+            var zip = new JSZip();
+            for (var i = 0; i < barcodes.length; i++) {
+                var svg = barcodes[i].outerHTML;
+                zip.file(productType.value+"_" + i + ".svg", svg);
+            }
+
+            zip.generateAsync({ type: "blob" })
+                .then(function (content) {
+                    saveAs(content, productType.value+".zip");
+                });
+        }
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.js"></script>
+    
+
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Analytics</title>
+    <!-- Include Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Inventory Chart</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="inventoryChart" width="400" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBck4oIFAU6ynyq-rGO4hTEk60KIzcnS6k",
+            authDomain: "inventtest-f47d9.firebaseapp.com",
+            projectId: "inventtest-f47d9",
+            storageBucket: "inventtest-f47d9.appspot.com",
+            messagingSenderId: "175503530578",
+            appId: "1:175503530578:web:5a3697688bdae2d6d15d8b",
+            measurementId: "G-0FD3P43CCF"
+        };
+
+        // Initialize Firebase app
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Function to update the chart with Firestore data
+        function updateChartWithFirestoreData(data) {
+            console.log(data);
+            // Extract product names and unit counts from the data
+            const productNames = data.map(item => item.productName);
+            console.log(productNames);
+            const unitCounts = data.map(item => item.unitCount);
+            console.log(unitCounts);
+            const originalCounts = data.map(item => item.originalCount);
+            console.log(originalCounts);
+
+            // Create a new Chart.js chart
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            const myChart = new Chart(ctx, {
+            //     type: 'bar',
+            //     data: {
+            //         labels: productNames,
+            //         datasets: [{
+            //             label: 'Units Remaining',
+            //             data: unitCounts,
+            //             backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            //             borderColor: 'rgba(54, 162, 235, 1)',
+            //             borderWidth: 1
+            //         }]
+            //     },
+            //     options: {
+            //         scales: {
+            //             y: {
+            //                 beginAtZero: true
+            //             }
+            //         }
+            //     }
+            // });
+
+
+
+            type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [{
+                        label: 'Original Units',
+                        data: originalCounts,
+                        backgroundColor: 'rgba(111, 255, 111, 0.836)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: "Current Units",
+                        data: unitCounts,
+                        backgroundColor: 'rgba(255, 111, 111, 0.877)',
+                        borderColor: 'rgba(54,120,250,0.5)',
+                        borderWidth: 1
+                    }
+                ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+
+
+        }
+
+        // Function to listen for real-time updates from Firestore
+        function listenForRealtimeUpdates() {
+            const query = collection(db, "barcodes");
+            onSnapshot(query, (snapshot) => {
+                const data = [];
+                snapshot.forEach((doc) => {
+                    // Extract product name and unit count from each document
+                    const productName = doc.data().productType;
+                    const unitCount = doc.data().unit;
+                    const originalCount = doc.data().originalUnit;
+                    // const
+
+                    // Add product name and unit count to data array
+                    data.push({ productName, unitCount, originalCount});
+                });
+
+                // Update the chart with the new data
+                updateChartWithFirestoreData(data);
+            });
+        }
+
+        // Call the function to listen for real-time updates from Firestore
+        listenForRealtimeUpdates();
+    </script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Analytics</title>
+    <!-- Include Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .navbar {
+                display: none;
+            }
+            .btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Inventory Analytics</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <!-- Add a container for the search box -->
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#">Visuals</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Barcode Generation</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- Add the search box -->
+            <form class="d-flex justify-content-center">
+                <input class="form-control me-2" id="productFilter" type="search" placeholder="Search By Product" aria-label="Search">
+                <button class="btn btn-outline-light" type="submit">Search</button>
+            </form>
+        </div>
+    </nav>
+    
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Inventory Chart</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="inventoryChart" height="450"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table to display product data -->
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Product Data</h5>
+                        <div class="form-group mt-3">
+                            <input type="text" class="form-control" id="productFilter"
+                                placeholder="Filter by product name">
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Product Type</th>
+                                    <th scope="col">Initial Value</th>
+                                    <th scope="col">Current Value</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productDataBody">
+                                <!-- Data will be dynamically populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer">
+                        <button id="exportButton" class="btn btn-primary">Export PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.1.1/firebase-firestore.js";
+        // import { jsPDF } from "jspdf";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBck4oIFAU6ynyq-rGO4hTEk60KIzcnS6k",
+            authDomain: "inventtest-f47d9.firebaseapp.com",
+            projectId: "inventtest-f47d9",
+            storageBucket: "inventtest-f47d9.appspot.com",
+            messagingSenderId: "175503530578",
+            appId: "1:175503530578:web:5a3697688bdae2d6d15d8b",
+            measurementId: "G-0FD3P43CCF"
+        };
+        // Initialize Firebase app
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let originalData = [];
+        let myChart;
+
+        // Function to update the chart with Firestore data
+        function updateChartWithFirestoreData(data) {
+            console.log(data);
+            // Extract product names and unit counts from the data
+            const productNames = data.map(item => item.productName);
+            console.log(productNames);
+            const unitCounts = data.map(item => item.unitCount);
+            console.log(unitCounts);
+            const originalCounts = data.map(item => item.originalCount);
+            console.log(originalCounts);
+
+            // Create a new Chart.js chart
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: productNames,
+                    datasets: [{
+                        label: 'Original Units',
+                        data: originalCounts,
+                        backgroundColor: 'rgba(54, 162, 235, 1)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: "Current Units",
+                        data: unitCounts,
+                        backgroundColor: 'rgba(255, 111, 111, 0.877)',
+                        borderColor: 'rgba(54,120,250,0.5)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        }
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Update the product data table
+            const productDataBody = document.getElementById('productDataBody');
+            productDataBody.innerHTML = ''; // Clear previous data
+            data.forEach(item => {
+                const row = `
+                    <tr>
+                        <td>${item.productName}</td>
+                        <td>${item.originalCount}</td>
+                        <td>${item.unitCount}</td>
+                    </tr>
+                `;
+                productDataBody.innerHTML += row;
+            });
+        }
+
+
+
+        document.getElementById('productFilter').addEventListener('input', function () {
+            const filterValue = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#productDataBody tr');
+
+            rows.forEach(row => {
+                const productName = row.querySelector('td:nth-child(1)').innerText.toLowerCase();
+                if (productName.includes(filterValue)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Update the chart based on the filtered data
+            updateChartWithFilteredData(filterValue);
+        });
+
+        // Function to update the chart based on filtered data
+        function updateChartWithFilteredData(filterValue) {
+            // console.log("Product Name",item.productName)
+            const filteredData = originalData.filter(item => item.productName.toLowerCase().includes(filterValue));
+
+            const productNames = filteredData.map(item => item.productName);
+            const unitCounts = filteredData.map(item => item.unitCount);
+            const originalCounts = filteredData.map(item => item.originalCount);
+
+            // Update chart data
+            myChart.data.labels = productNames;
+            myChart.data.datasets[0].data = originalCounts;
+            myChart.data.datasets[1].data = unitCounts;
+            myChart.update();
+        }
+
+        // Function to update the product data table with background color based on current units
+        function updateTableWithBackgroundColor(data) {
+            const productDataBody = document.getElementById('productDataBody');
+            productDataBody.innerHTML = ''; // Clear previous data
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                const percentage = (item.unitCount / item.originalCount) * 100;
+                if (percentage <= 99) {
+                    row.classList.add('bg-danger'); // Add red background color
+                }
+                row.innerHTML = `
+                    <td>${item.productName}</td>
+                    <td>${item.originalCount}</td>
+                    <td>${item.unitCount}</td>
+                `;
+                productDataBody.appendChild(row);
+            });
+        }
+
+
+        // Function to trigger browser's print option
+        function triggerBrowserPrint() {
+            window.print();
+        }
+
+        // Event listener for export button
+        document.getElementById('exportButton').addEventListener('click', triggerBrowserPrint);
+
+        // Function to listen for real-time updates from Firestore
+        function listenForRealtimeUpdates() {
+            const query = collection(db, "barcodes");
+            onSnapshot(query, (snapshot) => {
+                const data = [];
+                snapshot.forEach((doc) => {
+                    // Extract product name and unit count from each document
+                    const productName = doc.data().productType;
+                    const unitCount = doc.data().unit;
+                    const originalCount = doc.data().originalUnit;
+
+                    // Add product name and unit count to data array
+                    data.push({ productName, unitCount, originalCount });
+                    originalData.push({ productName, unitCount, originalCount });
+                });
+
+                // Update the chart and table with the new data
+                updateChartWithFirestoreData(data);
+                updateTableWithBackgroundColor(data);
+            });
+        }
+
+        // Call the function to listen for real-time updates from Firestore
+        listenForRealtimeUpdates();
+    </script>
+</body>
+
+</html>
