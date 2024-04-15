@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barcode Generator</title>
+    <title>New Barcode</title>
     <!-- Bootstrap CSS -->
     <link type="image/png"  rel="icon" href="./assets/barcodeScan.png">
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
@@ -84,6 +84,9 @@
             measurementId: "G-0FD3P43CCF"
         };
 
+
+        let zipName = "";
+
         // Initialize Firebase app
         const app = initializeApp(firebaseConfig);
         // const analytics = getAnalytics(app);
@@ -112,6 +115,12 @@
             var quantity = parseInt(document.getElementById("quantity").value);
             var barcodeContainer = document.getElementById("barcodeContainer");
             let originalQuantity = quantity;
+            zipName = productType;
+
+            if(productType === "" || isNaN(quantity)){
+                alert("Make sure you entered correct values in the Fields");
+                return;
+            }
 
 
             barcodeContainer.innerHTML = ""; // Clear previous barcodes
@@ -144,6 +153,7 @@
             storeBarcodeInFirestore(productType, barcodeValue, quantity,originalQuantity);
             document.getElementById("downloadButton").style.display = "block";
             document.getElementById("downloadButtonPage").style.display = "block";
+
         }
 
         // Function to generate barcode value
@@ -160,10 +170,14 @@
                     productType: productType,
                     barcode: barcodeValue,
                     unit: quantity,
-                    originalUnit:originalQuantity
+                    originalUnit:originalQuantity,
+                    batch: 1
                 });
                 console.log("Barcode data stored in Firestore with ID: ", docRef.id);
                 alert("data stored");
+                // clear the fields
+                document.getElementById("productType").value = "";
+                document.getElementById("quantity").value = "";
             } catch (error) {
                 console.log("Store Proccess faced and error")
                 console.error("Error storing barcode data in Firestore: ", error);
@@ -206,7 +220,7 @@
 
             zip.generateAsync({ type: "blob" })
                 .then(function (content) {
-                    saveAs(content, productType.value+".zip");
+                    saveAs(content, zipName+".zip");
                 });
         }
 

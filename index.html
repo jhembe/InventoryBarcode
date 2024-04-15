@@ -110,6 +110,7 @@
                                     <th scope="col">Product Type</th>
                                     <th scope="col">Initial Value</th>
                                     <th scope="col">Current Value</th>
+                                    <th scope="col">Batch</th>
                                 </tr>
                             </thead>
                             <tbody id="productDataBody">
@@ -281,6 +282,7 @@
                     <td>${item.productName}</td>
                     <td>${item.originalCount}</td>
                     <td>${item.unitCount}</td>
+                    <td>${item.batchNo}</td>
                 `;
                 productDataBody.appendChild(row);
             });
@@ -298,10 +300,11 @@
                     const productName = doc.data().productType;
                     const unitCount = doc.data().unit;
                     const originalCount = doc.data().originalUnit;
+                    const batchNo = doc.data().batch;
 
                     // Add product name and unit count to data array
-                    data.push({ productName, unitCount, originalCount });
-                    originalData.push({ productName, unitCount, originalCount });
+                    data.push({ productName, unitCount, originalCount, batchNo });
+                    originalData.push({ productName, unitCount, originalCount, batchNo });
                 });
 
                 // Update the chart and table with the new data

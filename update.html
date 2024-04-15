@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barcode Generator</title>
+    <title>Restock Barcode</title>
     <!-- Bootstrap CSS -->
     <link type="image/png" rel="icon" href="./assets/barcodeScan.png">
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
@@ -40,6 +40,7 @@
                 <label for="productType">Product Type:</label>
                 
                 <select class="form-control" id="productType">
+                    <!-- <option value="" selected>Choose a product to Update</option> -->
                     <!-- Product types will be dynamically loaded here -->
                 </select>
                 <span id="productTypee" class="form-text">
@@ -94,6 +95,11 @@
         // Variable to store selected product type ID
         let selectedProductTypeId = "";
         let selectedProductUnit = null;
+        let selectedBatchNumber = null;
+        let batchNumbers = [];
+        let selectedBatch = null;
+        let zipName = "";
+        
 
         // Function to load product types from Firestore
         async function loadProductTypes() {
@@ -107,23 +113,42 @@
                 const productTypeId = doc.id; // Assuming the document ID is the product type ID
                 const productType = doc.data().productType; // Assuming productType is a field in the document
                 const productUnits = doc.data().unit; // Assuming unit is a field in the document
-                productTypes.push({ id: productTypeId, type: productType, unit:productUnits });
+                const batchNo = doc.data().batch; // assuming there exists a field batch in the document.
+                productTypes.push({ id: productTypeId, type: productType, unit:productUnits, batch:batchNo });
                 const option = document.createElement('option');
                 option.value = productType;
                 option.textContent = productType;
                 productTypeSelect.appendChild(option);
+                document.getElementById("productType").value = "";
+                // batchNumbers.push(batchNo);
+
             });
+
+            // selectedBatch = batchNumbers[0]
+            // console.log(batchNumbers);
+            // batchNumbers.pop();
+            // console.log("Selected Batch : ",selectedBatch);
+            // console.log("Batch Arrays : ",batchNumbers)
         }
 
         // Event listener for product type selection
         document.getElementById('productType').addEventListener('change', function() {
             selectedProductTypeId = productTypes.find(pt => pt.type === this.value).id;
             selectedProductUnit = productTypes.find(pt => pt.type === this.value).unit;
+            selectedBatchNumber = productTypes.find(pt => pt.type === this.value).batch;
+            batchNumbers.push(selectedBatchNumber);
             console.log('Selected Product Type ID:', selectedProductTypeId);
             console.log("Selected Product has a Value : ",this.value);
             console.log("Selected Product has unit : ",selectedProductUnit);
+
+            console.log("Arrays : ",batchNumbers);
+            selectedBatch = batchNumbers[0];
+            batchNumbers.pop();
+            console.log("Arrays : ",batchNumbers);
+
         });
 
+        // console.log("Selected Batch number : ", selectedBatchNumber);
 
         // Load product types when the page is loaded
         window.addEventListener('load', loadProductTypes);
@@ -162,7 +187,12 @@
             var quantity = parseInt(document.getElementById("quantity").value);
             var barcodeContainer = document.getElementById("barcodeContainer");
             let originalQuantity = quantity;
+            zipName = productType;
 
+            if(productType === "" || isNaN(quantity)){
+                alert("Make sure you entered correct values in the Fields");
+                return;
+            }
 
             barcodeContainer.innerHTML = ""; // Clear previous barcodes
 
@@ -196,14 +226,22 @@
 
         // Function to update barcode value and quantity in Firestore
         async function updateBarcodeInFirestore(barcodeValue, quantity) {
+            console.log("Selected Batch : ",selectedBatch)
+            selectedBatch += 1;
+            // console.log("Selected Batch Number :",batchNo);
             try {
                 const docRef = doc(db, 'barcodes', selectedProductTypeId);
                 await setDoc(docRef, {
                     barcode: barcodeValue,
                     originalUnit: quantity,
-                    unit: quantity
+                    unit: quantity,
+                    batch: selectedBatch
                 }, { merge: true });
                 console.log('Barcode updated successfully in Firestore.');
+                alert("Barcodes Updated");
+
+                // clear fields 
+                document.getElementById("quantity").value = "";
             } catch (error) {
                 console.error('Error updating barcode in Firestore:', error);
             }
@@ -251,8 +289,12 @@
 
             zip.generateAsync({ type: "blob" })
                 .then(function (content) {
-                    saveAs(content, productType.value+".zip");
+                    saveAs(content, zipName+".zip");
                 });
+            
+            console.log("Product Type : ",productType.value);
+            // clear the product type field after download
+            document.getElementById("productType").value = "";
         }
 
 
